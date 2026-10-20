@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Armador de Pallets Ganale</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: panel de pedido a la izquierda (fijo), pallets armados a la derecha; en celular se apila. */
+:root{
+  --bg:#eef2ee; --surface:#ffffff; --ink:#16201a; --muted:#5a6a5f; --line:#d3dcd5;
+  --accent:#2c6a3d; --accent-ink:#ffffff; --ok:#2e7d4f; --warn:#a96b0c; --bad:#b42318;
+  --warn-bg:#fbf1dc; --bad-bg:#fbe4e1; --ok-bg:#e1f1e6; --wood:#b98b57; --wood-line:#8c6538;
+  --f-display:"Archivo Narrow","Arial Narrow",Arial,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1511; --surface:#18201b; --ink:#e4ebe6; --muted:#97a69c; --line:#2b372f;
+  --accent:#72c08a; --accent-ink:#0f1511; --ok:#72c08a; --warn:#e5a63c; --bad:#f2735f;
+  --warn-bg:#2f2614; --bad-bg:#341a17; --ok-bg:#16301f; --wood:#8f6a40; --wood-line:#5f4424; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1511; --surface:#18201b; --ink:#e4ebe6; --muted:#97a69c; --line:#2b372f;
+  --accent:#72c08a; --accent-ink:#0f1511; --ok:#72c08a; --warn:#e5a63c; --bad:#f2735f;
+  --warn-bg:#2f2614; --bad-bg:#341a17; --ok-bg:#16301f; --wood:#8f6a40; --wood-line:#5f4424; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 32px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;padding-block:18px 14px;border-bottom:2px solid var(--ink);margin-bottom:18px}
+header h1{font-family:var(--f-display);font-weight:700;font-size:28px;letter-spacing:.01em;margin:0;text-wrap:balance}
+header .sub{color:var(--muted);font-size:13px}
+.wrap{display:grid;grid-template-columns:minmax(0,370px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.wrap{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+h2{font-family:var(--f-display);font-weight:700;font-size:19px;margin:0;letter-spacing:.02em;text-transform:uppercase}
+h3{font-family:var(--f-display);font-weight:700;font-size:17px;margin:0}
+.hint{color:var(--muted);font-size:12.5px;margin:0}
+.linea{display:grid;grid-template-columns:minmax(0,1fr) 76px 30px;gap:6px;align-items:center}
+.linea .meta{grid-column:1/-1;font-size:11.5px;color:var(--muted);font-family:var(--f-mono);margin-top:-3px}
+.linea .meta.err{color:var(--bad)}
+#lineas{display:flex;flex-direction:column;gap:9px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:7px 8px;width:100%;min-width:0}
+input[type=number]{font-family:var(--f-mono);text-align:right}
+textarea{font-family:var(--f-mono);min-height:90px;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button{font:inherit;font-weight:500;cursor:pointer;border-radius:4px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 12px}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.x{padding:4px 0;color:var(--muted);font-size:16px;line-height:1}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+details{border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;font-weight:600;font-size:13px}
+details>div{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.params{display:grid;grid-template-columns:minmax(0,1fr) 84px;gap:6px 10px;align-items:center;font-size:13px}
+.res{display:flex;flex-direction:column;gap:16px;min-width:0}
+.resumen{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.big{display:flex;flex-wrap:wrap;gap:6px 26px;align-items:baseline}
+.big .n{font-family:var(--f-display);font-weight:700;font-size:34px;line-height:1}
+.big .l{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.big>div{display:flex;flex-direction:column;gap:2px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tabs button[aria-pressed=true]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.msg{font-size:13px;padding:7px 10px;border-radius:4px;border-left:3px solid}
+.msg.warn{background:var(--warn-bg);border-color:var(--warn)}
+.msg.bad{background:var(--bad-bg);border-color:var(--bad)}
+.msg.ok{background:var(--ok-bg);border-color:var(--ok)}
+.msg.info{background:var(--bg);border-color:var(--line);color:var(--muted)}
+.pallets{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,430px),1fr));gap:16px}
+.pallet{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.ptop{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-family:var(--f-mono);font-size:12px;padding:2px 7px;border-radius:3px;background:var(--bg);border:1px solid var(--line)}
+.chip.ok{border-color:var(--ok);color:var(--ok)} .chip.warn{border-color:var(--warn);color:var(--warn)} .chip.bad{border-color:var(--bad);color:var(--bad)}
+.vis{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:520px){.vis{grid-template-columns:minmax(0,1fr)}}
+svg text{font-family:var(--f-mono)}
+.armado{margin:0;padding:0;list-style:none;display:flex;flex-direction:column-reverse;gap:3px;font-size:12.5px}
+.armado li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:6px;align-items:start}
+.armado .num{font-family:var(--f-mono);color:var(--muted);text-align:right}
+.sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:baseline;border:1px solid rgba(0,0,0,.25)}
+.tag{font-size:11px;color:var(--warn);margin-left:4px}
+.tblwrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12.5px;font-variant-numeric:tabular-nums}
+th,td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+td.n,th.n{text-align:right;font-family:var(--f-mono)}
+.avisos{display:flex;flex-direction:column;gap:6px}
+.vacio{background:var(--surface);border:1px dashed var(--line);border-radius:6px;padding:28px;text-align:center;color:var(--muted)}
+.cat td{white-space:normal}
+.est{color:var(--warn);font-size:11px}
+.datos{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.datos label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.filebtn{position:relative;overflow:hidden;display:inline-flex;align-items:center}
+.filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.printhead{display:none}
+.printhead h2{font-size:22px;text-transform:none;letter-spacing:0}
+.printhead .pmeta{display:flex;flex-wrap:wrap;gap:4px 22px;margin:6px 0 10px;font-size:12px}
+@media print{
+  :root,:root:not([data-theme="light"]),:root[data-theme="dark"]{
+    --bg:#ffffff; --surface:#ffffff; --ink:#111111; --muted:#555555; --line:#bbbbbb;
+    --accent:#2c6a3d; --ok:#2e7d4f; --warn:#8a5a00; --bad:#b42318;
+    --warn-bg:#fdf4e1; --bad-bg:#fbe4e1; --ok-bg:#e9f5ec; --wood:#b98b57; --wood-line:#8c6538; color-scheme:light}
+  @page{size:A4;margin:12mm}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{padding:0;font-size:11px}
+  header .sub,.panel,.tabs,.acciones,#resultado .msg.ok{display:none!important}
+  header{margin-bottom:8px;padding-block:0 6px}
+  .printhead{display:block}
+  .wrap{display:block}
+  .resumen,.pallet{border:1px solid var(--line)}
+  .pallets{display:block}
+  .pallet{break-inside:avoid;page-break-inside:avoid;margin-top:10px}
+  .vis{grid-template-columns:auto minmax(0,1fr)}
+}
+</style>
+
+</head>
+<body>
+<header>
+  <h1>Armador de Pallets</h1>
+  <span class="sub">Ganale &amp; Co · pallets mixtos · yerba Aguantadora y Sinceridad · base Arlog 120×100</span>
+</header>
+
+<main class="wrap">
+  <section class="panel" aria-labelledby="hPedido">
+    <h2 id="hPedido">Pedido</h2>
+    <div class="datos">
+      <label for="pCliente">Cliente / destino<input id="pCliente" type="text" placeholder="Ej.: Carrefour Posadas"></label>
+      <label for="pNro">Nº pedido / remito<input id="pNro" type="text" placeholder="Ej.: 0001-00012345"></label>
+    </div>
+    <p class="hint">Cargá cada artículo con la cantidad en <b>cajas / bultos</b>. El armado se recalcula solo.</p>
+    <div id="lineas"></div>
+    <div class="row">
+      <button id="btnAdd" type="button">+ Agregar artículo</button>
+      <button id="btnEjemplo" type="button">Cargar ejemplo</button>
+      <button id="btnVaciar" type="button">Vaciar</button>
+      <label class="filebtn" for="fileAbrir"><button type="button" tabindex="-1">Abrir configuración guardada</button><input id="fileAbrir" type="file" accept=".json,application/json" aria-label="Abrir configuración guardada"></label>
+    </div>
+    <p class="hint" id="msgAbrir"></p>
+    <details>
+      <summary>Pegar pedido como texto</summary>
+      <div>
+        <p class="hint">Una línea por artículo: código y cajas. Ej.: <code>Y0173 40</code></p>
+        <textarea id="txtPegar" placeholder="Y0173 40&#10;Y0162 25&#10;Y0007 30"></textarea>
+        <button id="btnPegar" type="button" class="primary">Cargar al pedido</button>
+      </div>
+    </details>
+    <details>
+      <summary>Límites y criterios</summary>
+      <div class="params">
+        <label for="pAlt">Altura máxima del pallet (cm, con madera)</label><input id="pAlt" type="number" value="160" min="50">
+        <label for="pPeso">Peso máximo del pallet (kg, con madera)</label><input id="pPeso" type="number" value="600" min="50">
+        <label for="pMadAlt">Alto de la madera Arlog (cm)</label><input id="pMadAlt" type="number" value="15" min="0">
+        <label for="pMadPeso">Peso de la madera Arlog (kg)</label><input id="pMadPeso" type="number" value="25" min="0">
+        <label for="pAltEst">Altura supuesta de pallet estándar sin dato (cm)</label><input id="pAltEst" type="number" value="150" min="50">
+        <label for="pFill">Camada se toma como completa desde (%)</label><input id="pFill" type="number" value="85" min="10" max="100">
+        <label for="pTol">Diferencia de alto admitida en camada mixta (cm)</label><input id="pTol" type="number" value="3" min="0" step="0.5">
+      </div>
+    </details>
+  </section>
+
+  <section class="res" id="resultado" aria-live="polite"></section>
+</main>
+
+<details style="margin-top:22px" class="panel">
+  <summary>Surtido cargado (configuración estándar por artículo)</summary>
+  <div class="tblwrap"><table class="cat" id="tblCat"></table></div>
+</details>
+
+<datalist id="dlArt"></datalist>
+
+<script>
+const CAT = [{"codigo": "Y0007", "descripcion": "Aguantadora Tradicional 6x1 kg", "unidades_caja": 6, "kg_caja": 6, "cajas_por_camada": 12, "camadas": 7, "cajas_por_pallet": 84, "kg_pallet": 504, "altura_pallet_std_cm": null}, {"codigo": "Y0026", "descripcion": "Sinceridad 6x1 kg", "unidades_caja": 6, "kg_caja": 6, "cajas_por_camada": 12, "camadas": 7, "cajas_por_pallet": 84, "kg_pallet": 504, "altura_pallet_std_cm": null}, {"codigo": "Y0092", "descripcion": "Aguantadora Suave 6x1 kg", "unidades_caja": 6, "kg_caja": 6, "cajas_por_camada": 12, "camadas": 7, "cajas_por_pallet": 84, "kg_pallet": 504, "altura_pallet_std_cm": null}, {"codigo": "Y0137", "descripcion": "Aguantadora Despalada 10x½ kg (prensa)", "unidades_caja": 10, "kg_caja": 5, "cajas_por_camada": 16, "camadas": 7, "cajas_por_pallet": 112, "kg_pallet": 560, "altura_pallet_std_cm": null}, {"codigo": "Y0171", "descripcion": "Aguantadora Tradicional 10x½ kg", "unidades_caja": 10, "kg_caja": 5, "cajas_por_camada": 12, "camadas": 9, "cajas_por_pallet": 108, "kg_pallet": 540, "altura_pallet_std_cm": 152}, {"codigo": "Y0172", "descripcion": "Sinceridad 10x½ kg", "unidades_caja": 10, "kg_caja": 5, "cajas_por_camada": 12, "camadas": 9, "cajas_por_pallet": 108, "kg_pallet": 540, "altura_pallet_std_cm": 152}, {"codigo": "Y0173", "descripcion": "Aguantadora Suave 10x½ kg", "unidades_caja": 10, "kg_caja": 5, "cajas_por_camada": 12, "camadas": 9, "cajas_por_pallet": 108, "kg_pallet": 540, "altura_pallet_std_cm": 152}, {"codigo": "Y0175", "descripcion": "Aguantadora Tereré 10x½ kg", "unidades_caja": 10, "kg_caja": 5, "cajas_por_camada": 12, "camadas": 9, "cajas_por_pallet": 108, "kg_pallet": 540, "altura_pallet_std_cm": 152}];
+const byCod = Object.fromEntries(CAT.map(p => [p.codigo, p]));
+const COLORS = ['#9cc9a3','#e8c378','#8fb9e0','#e0a3a0','#bba8dc','#9fd4c6','#e6b48a','#c8d184','#d9a9c9','#a2b6c3','#f0d78a','#b4cf9a','#c9b8a0','#a9c1ef'];
+const ES = new Intl.NumberFormat('es-AR', {maximumFractionDigits: 1});
+const f0 = n => Math.round(n).toLocaleString('es-AR');
+const f1 = n => ES.format(n);
+
+// ---------- Datos de entrada ----------
+const EJEMPLO = [['Y0007',30],['Y0092',14],['Y0026',20],['Y0171',30],['Y0173',24],['Y0172',18],['Y0137',16],['Y0175',12]];
+let lineas = [];
+try { const s = JSON.parse(localStorage.getItem('armador_lineas_v3') || 'null'); if (Array.isArray(s) && s.length) lineas = s; } catch (e) {}
+if (!lineas.length) lineas = EJEMPLO.map(([codigo, cajas]) => ({codigo, cajas}));
+const guardar = () => { try {
+  localStorage.setItem('armador_lineas_v3', JSON.stringify(lineas));
+  localStorage.setItem('armador_datos', JSON.stringify({cliente: $('pCliente').value, nro: $('pNro').value}));
+} catch (e) {} };
+// Dentro de Claude (vista en marco) no se pueden descargar archivos ni imprimir; en el .html suelto sí
+const EN_CLAUDE = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+let ultimo = null;
+const PARAMS = ['pAlt', 'pPeso', 'pMadAlt', 'pMadPeso', 'pAltEst', 'pFill', 'pTol'];
+const hoy = () => new Date().toLocaleDateString('es-AR');
+const nombreArchivo = () => {
+  const base = ['Pallets', $('pNro').value, $('pCliente').value].map(x => (x || '').trim()).filter(Boolean).join(' ');
+  return (base + ' ' + new Date().toISOString().slice(0, 10)).replace(/[\\/:*?"<>|]+/g, '-');
+};
+function descargar(nombre, contenido, tipo) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([contenido], {type: tipo})); a.download = nombre;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+
+function cfg() {
+  const v = id => parseFloat(document.getElementById(id).value) || 0;
+  return {altMax: v('pAlt'), pesoMax: v('pPeso'), maderaAlto: v('pMadAlt'), maderaPeso: v('pMadPeso'),
+          altEst: v('pAltEst') || 150, fillMin: (v('pFill') || 85) / 100, tolAlt: v('pTol')};
+}
+const unitario = p => p.cajas_por_pallet <= 1;
+const altCamada = (p, c) => ((p.altura_pallet_std_cm || c.altEst) - c.maderaAlto) / p.camadas;
+
+// ---------- Motor de armado ----------
+function capa(items) { const c = {items}; recalc(c); return c; }
+function recalc(c) {
+  c.h = Math.max(...c.items.map(i => i.h)); c.hmin = Math.min(...c.items.map(i => i.h));
+  c.kg = c.items.reduce((s, i) => s + i.kg, 0); c.fill = c.items.reduce((s, i) => s + i.fill, 0);
+  c.mixta = new Set(c.items.map(i => i.p.codigo)).size > 1;
+}
+const estable = (c, C) => c.fill >= C.fillMin - 1e-9 && (c.h - c.hmin) <= C.tolAlt + 1e-9;
+
+function construir(lineasIn, C) {
+  const agg = {}, errores = [];
+  for (const l of lineasIn) {
+    const cod = (l.codigo || '').trim().toUpperCase(), n = Math.floor(+l.cajas || 0);
+    if (!cod || n <= 0) continue;
+    if (!byCod[cod]) { errores.push(`El código ${cod} no está en el catálogo.`); continue; }
+    agg[cod] = (agg[cod] || 0) + n;
+  }
+  const grupos = {}, parciales = [], sueltos = [], estimados = [];
+  for (const [cod, n] of Object.entries(agg)) {
+    const p = byCod[cod];
+    if (unitario(p)) { sueltos.push({p, cajas: n, kg: n * p.kg_caja}); continue; }
+    if (!p.altura_pallet_std_cm) estimados.push(p);
+    const h = altCamada(p, C), cpc = p.cajas_por_camada, full = Math.floor(n / cpc), rest = n - full * cpc;
+    if (full) grupos[cod] = Array.from({length: full}, () => capa([{p, cajas: cpc, fill: 1, h, kg: cpc * p.kg_caja}]));
+    if (rest) parciales.push({p, cajas: rest, fill: rest / cpc, h, kg: rest * p.kg_caja});
+  }
+  // Restos: se agrupan en camadas mixtas de alto parejo (primero los más altos y los más grandes)
+  parciales.sort((a, b) => b.h - a.h || b.fill - a.fill);
+  const mixtas = [];
+  for (const it of parciales) {
+    let best = null;
+    for (const c of mixtas)
+      if (c.fill + it.fill <= 1.0001 && Math.abs(c.h - it.h) <= C.tolAlt && Math.abs(c.hmin - it.h) <= C.tolAlt && (!best || c.fill > best.fill)) best = c;
+    if (best) { best.items.push(it); recalc(best); } else mixtas.push(capa([it]));
+  }
+  // Las camadas que siguen incompletas se juntan entre sí para que quede una sola arriba
+  for (let cambio = true; cambio;) {
+    cambio = false;
+    const ines = mixtas.filter(c => !estable(c, C)).sort((a, b) => b.fill - a.fill);
+    busca: for (let i = 0; i < ines.length; i++) for (let j = ines.length - 1; j > i; j--)
+      if (ines[i].fill + ines[j].fill <= 1.0001) {
+        ines[i].items.push(...ines[j].items); recalc(ines[i]); mixtas.splice(mixtas.indexOf(ines[j]), 1); cambio = true; break busca;
+      }
+  }
+  return {grupos, mixtas, sueltos, estimados, errores, agg};
+}
+
+function empacar(N, B, C) {
+  const Hu = C.altMax - C.maderaAlto, Wu = C.pesoMax - C.maderaPeso;
+  const P = Array.from({length: N}, () => ({capas: [], h: 0, kg: 0, sueltos: []}));
+  const load = p => Math.max(p.h / Hu, p.kg / Wu);
+  const cabe = (p, c) => p.h + c.h <= Hu + 0.01 && p.kg + c.kg <= Wu + 0.01;
+  const put = (p, c) => { p.capas.push(c); p.h += c.h; p.kg += c.kg; };
+  const gs = Object.values(B.grupos).sort((a, b) => b.length * b[0].kg - a.length * a[0].kg);
+  for (const g of gs) {
+    const gh = g.length * g[0].h, gk = g.length * g[0].kg;
+    const enteros = P.filter(p => p.h + gh <= Hu + 0.01 && p.kg + gk <= Wu + 0.01).sort((a, b) => load(a) - load(b));
+    if (enteros.length) { g.forEach(c => put(enteros[0], c)); continue; }
+    const rest = [...g];
+    while (rest.length) {
+      const cand = P.filter(p => cabe(p, rest[0])).sort((a, b) => load(a) - load(b));
+      if (!cand.length) return null;
+      while (rest.length && cabe(cand[0], rest[0])) put(cand[0], rest.shift());
+    }
+  }
+  const mx = [...B.mixtas].sort((a, b) => (estable(b, C) - estable(a, C)) || b.kg - a.kg);
+  for (const c of mx) {
+    const ok = estable(c, C);
+    const cand = P.filter(p => cabe(p, c)).sort((a, b) => {
+      if (!ok) { const ia = a.capas.some(x => !estable(x, C)), ib = b.capas.some(x => !estable(x, C)); if (ia !== ib) return ia - ib; }
+      const af = q => c.items.filter(it => q.capas.some(x => x.items.some(y => y.p.codigo === it.p.codigo))).length;
+      return (af(b) - af(a)) || load(a) - load(b);
+    });
+    if (!cand.length) return null;
+    put(cand[0], c);
+  }
+  for (const s of B.sueltos) {
+    const cand = P.filter(p => p.kg + s.kg <= Wu + 0.01).sort((a, b) => load(a) - load(b));
+    if (!cand.length) return null;
+    cand[0].sueltos.push(s); cand[0].kg += s.kg;
+  }
+  const out = P.filter(p => p.capas.length || p.sueltos.length);
+  for (const p of out) {
+    // Abajo: camadas completas, de la más pesada a la más liviana. Arriba: las incompletas.
+    p.capas.sort((a, b) => (estable(b, C) - estable(a, C)) || (estable(a, C) ? b.kg - a.kg : b.fill - a.fill) ||
+      a.items[0].p.codigo.localeCompare(b.items[0].p.codigo));
+    evaluar(p, C);
+  }
+  return out;
+}
+
+function evaluar(p, C) {
+  const av = [], altTot = p.h + C.maderaAlto, kgTot = p.kg + C.maderaPeso;
+  if (altTot > C.altMax + 0.5) av.push(['bad', `Supera la altura máxima (${f0(altTot)} cm).`]);
+  if (kgTot > C.pesoMax + 0.5) av.push(['bad', `Supera el peso máximo (${f0(kgTot)} kg).`]);
+  const ines = p.capas.filter(c => !estable(c, C));
+  if (ines.length > 1) av.push(['warn', `Tiene ${ines.length} camadas incompletas. Solo la de arriba queda bien; conviene sumar o sacar cajas para completar las otras.`]);
+  let y = 0, mom = 0;
+  p.capas.forEach(c => { mom += c.kg * (y + c.h / 2); y += c.h; });
+  if (p.h > 0 && p.kg > 0 && mom / p.kg / p.h > 0.55) av.push(['warn', 'El peso está cargado hacia arriba. Revisar estabilidad.']);
+  const top = p.capas[p.capas.length - 1];
+  if (top && !estable(top, C) && top.fill < 0.4) av.push(['info', `La última camada ocupa ${f0(top.fill * 100)}% de la base: ubicarla al centro y asegurarla con film y esquineros.`]);
+  if (top && !estable(top, C) && top.h - top.hmin > C.tolAlt) av.push(['info', 'La última camada mezcla cajas de distinto alto: va arriba de todo, sin nada encima.']);
+  if (p.capas.some(c => c.mixta && estable(c, C))) av.push(['info', 'Tiene camadas mixtas completas: armarlas en bloques por producto, cruzando el amarre con la camada de abajo.']);
+  if (p.sueltos.length) av.push(['info', 'Los artículos unitarios (mates, bombillas) van en una caja aparte arriba del pallet.']);
+  p.avisos = av; p.altTot = altTot; p.kgTot = kgTot;
+  p.estado = av.some(a => a[0] === 'bad') ? 'bad' : av.some(a => a[0] === 'warn') ? 'warn' : 'ok';
+}
+
+function planificar(lineasIn, C) {
+  const B = construir(lineasIn, C);
+  const Hu = C.altMax - C.maderaAlto, Wu = C.pesoMax - C.maderaPeso;
+  const capas = [...Object.values(B.grupos).flat(), ...B.mixtas];
+  const H = capas.reduce((s, c) => s + c.h, 0), W = capas.reduce((s, c) => s + c.kg, 0) + B.sueltos.reduce((s, x) => s + x.kg, 0);
+  const res = {B, H, W, opciones: [], motivo: ''};
+  if (!capas.length && !B.sueltos.length) return res;
+  if (Hu <= 0 || Wu <= 0) { B.errores.push('Revisá los límites: la madera ocupa toda la altura o el peso permitido.'); return res; }
+  const capaMax = capas.find(c => c.h > Hu + 0.01 || c.kg > Wu + 0.01);
+  if (capaMax) { B.errores.push(`Una camada de ${capaMax.items[0].p.descripcion} no entra sola en un pallet con estos límites.`); return res; }
+  const nH = Math.ceil(H / Hu - 1e-9), nW = Math.ceil(W / Wu - 1e-9), N0 = Math.max(1, nH, nW);
+  res.motivo = N0 <= 1 ? '' : nW >= nH ? `Se divide por peso: ${f0(W)} kg de mercadería no entran en ${N0 - 1} pallet${N0 > 2 ? 's' : ''} de ${f0(C.pesoMax)} kg.` : `Se divide por altura: ${f0(H)} cm de camadas no entran en ${N0 - 1} pallet${N0 > 2 ? 's' : ''} de ${f0(C.altMax)} cm.`;
+  if (N0 > 1 && nH > nW) {
+    const exceso = H - (N0 - 1) * Hu;
+    if (exceso <= 0.08 * Hu) res.motivo += ` Sobran solo ≈${f0(exceso)} cm: sacando o cambiando una camada chica entraría en ${N0 - 1} pallet${N0 > 2 ? 's' : ''}.`;
+  }
+  for (let N = N0; N <= N0 + 6 && res.opciones.length < 2; N++) {
+    const P = empacar(N, B, C);
+    if (P && !res.opciones.some(o => o.pallets.length === P.length)) res.opciones.push({pallets: P});
+  }
+  return res;
+}
+
+// ---------- Interfaz ----------
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[ch]));
+$('dlArt').innerHTML = CAT.map(p => `<option value="${p.codigo} · ${esc(p.descripcion)}">`).join('');
+
+function renderLineas() {
+  $('lineas').innerHTML = lineas.map((l, i) => {
+    const p = byCod[(l.codigo || '').toUpperCase()];
+    const val = p ? `${p.codigo} · ${p.descripcion}` : (l.codigo || '');
+    let meta = '', err = false;
+    if (p && l.cajas > 0) {
+      if (unitario(p)) meta = `${f0(l.cajas)} u · ${f1(l.cajas * p.kg_caja)} kg · unitario`;
+      else { const c = Math.floor(l.cajas / p.cajas_por_camada), r = l.cajas % p.cajas_por_camada;
+        meta = `${f0(l.cajas * p.unidades_caja)} u · ${f1(l.cajas * p.kg_caja)} kg · ${c} camada${c === 1 ? '' : 's'}${r ? ` + ${r} cj` : ''} (std ${p.cajas_por_camada}×${p.camadas})`; }
+    } else if (l.codigo && !p) { meta = 'Código no encontrado'; err = true; }
+    return `<div class="linea" data-i="${i}">
+      <input list="dlArt" id="art${i}" aria-label="Artículo" placeholder="Código o descripción" value="${esc(val)}">
+      <input type="number" id="cj${i}" aria-label="Cajas" min="0" step="1" value="${l.cajas || ''}" placeholder="cajas">
+      <button class="x" type="button" aria-label="Quitar artículo" data-del="${i}">✕</button>
+      ${meta ? `<div class="meta${err ? ' err' : ''}">${esc(meta)}</div>` : ''}</div>`;
+  }).join('');
+}
+function resolverCodigo(txt) {
+  const t = txt.trim(); if (!t) return '';
+  const m = t.match(/^(Y\d{4})/i); if (m) return m[1].toUpperCase();
+  const hit = CAT.find(p => p.descripcion.toLowerCase().includes(t.toLowerCase()));
+  return hit ? hit.codigo : t.toUpperCase();
+}
+$('lineas').addEventListener('change', e => {
+  const row = e.target.closest('.linea'); if (!row) return; const i = +row.dataset.i;
+  if (e.target.id.startsWith('art')) lineas[i].codigo = resolverCodigo(e.target.value);
+  if (e.target.id.startsWith('cj')) lineas[i].cajas = Math.max(0, Math.floor(+e.target.value || 0));
+  actualizar(true);
+});
+$('lineas').addEventListener('input', e => {
+  if (!e.target.id.startsWith('cj')) return; const i = +e.target.closest('.linea').dataset.i;
+  lineas[i].cajas = Math.max(0, Math.floor(+e.target.value || 0)); actualizar(false);
+});
+$('lineas').addEventListener('click', e => { const d = e.target.dataset.del; if (d !== undefined) { lineas.splice(+d, 1); actualizar(true); } });
+$('btnAdd').onclick = () => { lineas.push({codigo: '', cajas: 0}); actualizar(true); $('art' + (lineas.length - 1)).focus(); };
+$('btnEjemplo').onclick = () => { lineas = EJEMPLO.map(([codigo, cajas]) => ({codigo, cajas})); actualizar(true); };
+$('btnVaciar').onclick = () => { lineas = [{codigo: '', cajas: 0}]; actualizar(true); };
+$('btnPegar').onclick = () => {
+  const nuevas = $('txtPegar').value.split(/\n+/).map(s => s.trim()).filter(Boolean).map(s => {
+    const m = s.match(/^(\S+)[\s;,\t]+(\d+)/); return m ? {codigo: resolverCodigo(m[1]), cajas: +m[2]} : null; }).filter(Boolean);
+  if (nuevas.length) { lineas = lineas.filter(l => l.codigo).concat(nuevas); $('txtPegar').value = ''; actualizar(true); }
+};
+document.querySelectorAll('.params input').forEach(el => el.addEventListener('input', () => actualizar(false)));
+
+let opcionSel = 0, colorMap = {};
+function svgPallet(p, C) {
+  const W = 200, scale = 1.6, Hmax = C.altMax * scale, top = 14, base = top + Hmax, wood = C.maderaAlto * scale;
+  let y = base - wood, s = '';
+  s += `<line x1="0" x2="${W + 30}" y1="${top}" y2="${top}" stroke="var(--bad)" stroke-dasharray="4 3" stroke-width="1"/>`;
+  s += `<text x="${W + 30}" y="${top - 4}" text-anchor="end" font-size="9" fill="var(--bad)">máx ${f0(C.altMax)} cm</text>`;
+  p.capas.forEach((c, idx) => {
+    const hpx = c.h * scale; let x = 0;
+    const ok = estable(c, C), totalFill = Math.min(1, c.fill), off = (1 - totalFill) * W / 2;
+    x = off;
+    c.items.forEach(it => {
+      const w = it.fill * W, hh = it.h * scale;
+      s += `<rect x="${x.toFixed(1)}" y="${(y - hh).toFixed(1)}" width="${w.toFixed(1)}" height="${hh.toFixed(1)}" fill="${colorMap[it.p.codigo]}" stroke="#2a2a2a" stroke-opacity=".45" stroke-width="1"${ok ? '' : ' stroke-dasharray="3 2"'}/>`;
+      if (hh >= 11 && w >= 26) s += `<text x="${(x + 4).toFixed(1)}" y="${(y - hh / 2 + 3.5).toFixed(1)}" font-size="9" fill="#141414">${esc(it.p.codigo)} · ${it.cajas}</text>`;
+      x += w;
+    });
+    s += `<text x="${W + 6}" y="${(y - hpx / 2 + 3).toFixed(1)}" font-size="9" fill="var(--muted)">${idx + 1}</text>`;
+    y -= hpx;
+  });
+  if (p.sueltos.length) s += `<rect x="${W / 2 - 18}" y="${(y - 14).toFixed(1)}" width="36" height="14" fill="var(--surface)" stroke="var(--muted)" stroke-dasharray="2 2"/><text x="${W / 2}" y="${(y - 4).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--muted)">sueltos</text>`;
+  s += `<rect x="0" y="${base - wood}" width="${W}" height="${wood}" fill="var(--wood)"/>`;
+  for (const bx of [0, W / 2 - 12, W - 24]) s += `<rect x="${bx}" y="${base - wood + wood * 0.35}" width="24" height="${wood * 0.65}" fill="var(--wood-line)"/>`;
+  s += `<rect x="0" y="${base - wood}" width="${W}" height="${wood * 0.3}" fill="var(--wood-line)" opacity=".55"/>`;
+  return `<svg viewBox="-2 0 ${W + 34} ${base + 4}" width="${W + 36}" style="max-width:100%;height:auto" role="img" aria-label="Vista lateral del pallet">${s}</svg>`;
+}
+
+function descCapa(c, C) {
+  const partes = c.items.map(it => `<span class="sw" style="background:${colorMap[it.p.codigo]}"></span>${esc(it.p.descripcion)} <b>${it.cajas} cj</b>`).join(' + ');
+  const ok = estable(c, C);
+  const tipo = !c.mixta && c.fill >= 0.999 ? '' : ok ? (c.mixta ? '<span class="tag" style="color:var(--muted)">mixta</span>' : `<span class="tag" style="color:var(--muted)">${f0(c.fill * 100)}%</span>`) : `<span class="tag">incompleta ${f0(c.fill * 100)}%</span>`;
+  return partes + tipo;
+}
+
+function render(R, C) {
+  const el = $('resultado'), B = R.B;
+  let html = '';
+  B.errores.forEach(e => html += `<div class="msg bad">${esc(e)}</div>`);
+  if (!R.opciones.length) {
+    if (!B.errores.length) html += `<div class="vacio">Cargá artículos y cajas en el pedido para ver cómo se arman los pallets.</div>`;
+    el.innerHTML = html; return;
+  }
+  if (opcionSel >= R.opciones.length) opcionSel = 0;
+  const op = R.opciones[opcionSel], P = op.pallets;
+  const totCj = Object.values(B.agg).reduce((s, n) => s + n, 0);
+  html += `<div class="resumen">
+    <div class="big">
+      <div><span class="n">${P.length}</span><span class="l">pallet${P.length > 1 ? 's' : ''}</span></div>
+      <div><span class="n">${f0(R.W)}</span><span class="l">kg mercadería</span></div>
+      <div><span class="n">${f0(totCj)}</span><span class="l">cajas</span></div>
+      <div><span class="n">${Object.keys(B.agg).length}</span><span class="l">artículos</span></div>
+    </div>`;
+  if (R.opciones.length > 1) html += `<div class="tabs" role="group" aria-label="Opciones de armado">${R.opciones.map((o, i) =>
+      `<button type="button" data-op="${i}" aria-pressed="${i === opcionSel}">${o.pallets.length} pallets${i === 0 ? ' · mínimo' : ' · más livianos y bajos'}</button>`).join('')}</div>`;
+  if (R.motivo) html += `<div class="msg info">${esc(R.motivo)}</div>`;
+  const conProb = P.filter(p => p.estado !== 'ok').length;
+  html += conProb ? `<div class="msg warn">${conProb} de ${P.length} pallet${P.length > 1 ? 's tienen' : ' tiene'} observaciones. Mirá el detalle abajo.</div>` : `<div class="msg ok">Todos los pallets respetan altura, peso y armado por camadas.</div>`;
+  if (B.estimados.length) html += `<div class="msg info">Alturas estimadas (pallet estándar de ${f0(C.altEst)} cm): ${B.estimados.map(p => esc(p.descripcion)).join(', ')}.</div>`;
+  html += `<div class="row acciones">
+      <button type="button" id="btnPdf" class="primary">Descargar PDF</button>
+      <button type="button" id="btnJson">Guardar configuración</button>
+      <button type="button" id="btnCsv">Descargar Excel</button>
+      <button type="button" id="btnCopiar">Copiar texto</button>
+      <span class="hint" id="copiado" style="align-self:center"></span></div>
+    ${EN_CLAUDE ? '<p class="hint acciones">Las descargas y el PDF funcionan en el archivo <b>Simulador de Pallets Ganale.html</b> abierto en el navegador.</p>' : ''}</div>`;
+  const cli = $('pCliente').value.trim(), nro = $('pNro').value.trim();
+  html = `<div class="printhead"><h2>Armado de pallets${nro ? ' · Pedido ' + esc(nro) : ''}</h2>
+    <div class="pmeta"><span><b>Cliente / destino:</b> ${esc(cli || '—')}</span><span><b>Fecha:</b> ${hoy()}</span>
+    <span><b>Límites:</b> ${f0(C.altMax)} cm · ${f0(C.pesoMax)} kg por pallet (con madera Arlog 120×100)</span></div>
+    <table><thead><tr><th>Código</th><th>Artículo</th><th class="n">Cajas</th><th class="n">Unid.</th><th class="n">Kg</th></tr></thead><tbody>
+    ${Object.entries(B.agg).map(([c, n]) => { const p = byCod[c]; return `<tr><td>${c}</td><td>${esc(p.descripcion)}</td><td class="n">${n}</td><td class="n">${f0(n * p.unidades_caja)}</td><td class="n">${f1(n * p.kg_caja)}</td></tr>`; }).join('')}
+    </tbody></table></div>` + html;
+
+  html += `<div class="pallets">` + P.map((p, i) => {
+    const filas = {};
+    p.capas.forEach(c => c.items.forEach(it => { const f = filas[it.p.codigo] ||= {p: it.p, cajas: 0}; f.cajas += it.cajas; }));
+    p.sueltos.forEach(s => { const f = filas[s.p.codigo] ||= {p: s.p, cajas: 0}; f.cajas += s.cajas; });
+    const altC = p.altTot > C.altMax ? 'bad' : p.altTot > C.altMax * 0.97 ? 'warn' : 'ok';
+    const kgC = p.kgTot > C.pesoMax ? 'bad' : p.kgTot > C.pesoMax * 0.97 ? 'warn' : 'ok';
+    return `<article class="pallet">
+      <div class="ptop"><h3>Pallet ${i + 1} de ${P.length}</h3>
+        <div class="chips"><span class="chip ${altC}">≈${f0(p.altTot)} cm</span><span class="chip ${kgC}">${f0(p.kgTot)} kg</span><span class="chip">${p.capas.length} camadas</span></div></div>
+      <div class="vis">${svgPallet(p, C)}
+        <div style="min-width:0;display:flex;flex-direction:column;gap:6px"><span class="hint">Armado de abajo hacia arriba</span>
+          <ol class="armado">${p.capas.map((c, k) => `<li><span class="num">${k + 1}</span><span>${descCapa(c, C)}</span></li>`).join('')}
+          ${p.sueltos.length ? `<li><span class="num">↑</span><span>Caja aparte: ${p.sueltos.map(s => `${esc(s.p.descripcion)} <b>${s.cajas} u</b>`).join(', ')}</span></li>` : ''}</ol></div></div>
+      ${p.avisos.length ? `<div class="avisos">${p.avisos.map(([t, m]) => `<div class="msg ${t}">${esc(m)}</div>`).join('')}</div>` : ''}
+      <div class="tblwrap"><table><thead><tr><th>Código</th><th>Artículo</th><th class="n">Cajas</th><th class="n">Unid.</th><th class="n">Kg</th></tr></thead><tbody>
+        ${Object.values(filas).map(f => `<tr><td>${f.p.codigo}</td><td style="white-space:normal">${esc(f.p.descripcion)}</td><td class="n">${f.cajas}</td><td class="n">${f0(f.cajas * f.p.unidades_caja)}</td><td class="n">${f1(f.cajas * f.p.kg_caja)}</td></tr>`).join('')}
+      </tbody></table></div></article>`;
+  }).join('') + `</div>`;
+  el.innerHTML = html;
+  ultimo = {P, C, B};
+  $('btnPdf').onclick = exportarPdf; $('btnJson').onclick = exportarJson; $('btnCsv').onclick = exportarCsv;
+  el.querySelectorAll('[data-op]').forEach(b => b.onclick = () => { opcionSel = +b.dataset.op; actualizar(false); });
+  $('btnCopiar').onclick = () => {
+    const txt = P.map((p, i) => `PALLET ${i + 1}/${P.length} — ≈${f0(p.altTot)} cm, ${f0(p.kgTot)} kg\n` +
+      p.capas.map((c, k) => `  ${k + 1}. ` + c.items.map(it => `${it.p.codigo} ${it.p.descripcion} x${it.cajas}`).join(' + ') + (estable(c, C) ? '' : ' (incompleta, arriba)')).join('\n') +
+      (p.sueltos.length ? '\n  Caja aparte: ' + p.sueltos.map(s => `${s.p.codigo} x${s.cajas}`).join(', ') : '')).join('\n\n');
+    const done = () => $('copiado').textContent = 'Copiado';
+    navigator.clipboard.writeText(txt).then(done).catch(() => { $('txtPegar').closest('details').open = true; $('txtPegar').value = txt; $('txtPegar').select(); $('copiado').textContent = 'Seleccioná y copiá el texto del cuadro de pegado'; });
+  };
+}
+
+function avisoDescarga() { if (EN_CLAUDE) $('copiado').textContent = 'Desde Claude no se puede descargar: usá el archivo .html.'; return EN_CLAUDE; }
+function exportarPdf() {
+  if (avisoDescarga()) return;
+  const t = document.title; document.title = nombreArchivo();
+  window.print(); setTimeout(() => document.title = t, 500);
+}
+function exportarJson() {
+  if (avisoDescarga() || !ultimo) return;
+  const {P, C} = ultimo;
+  const data = {tipo: 'armador-pallets-ganale', version: 1, guardado: new Date().toISOString(),
+    cliente: $('pCliente').value, nro: $('pNro').value,
+    pedido: lineas.filter(l => l.codigo && l.cajas > 0),
+    parametros: Object.fromEntries(PARAMS.map(id => [id, $(id).value])), opcion: opcionSel,
+    armado: P.map((p, i) => ({pallet: i + 1, altura_cm: Math.round(p.altTot), peso_kg: Math.round(p.kgTot),
+      camadas: p.capas.map((c, k) => ({camada: k + 1, completa: estable(c, C), items: c.items.map(it => ({codigo: it.p.codigo, articulo: it.p.descripcion, cajas: it.cajas}))})),
+      caja_aparte: p.sueltos.map(s => ({codigo: s.p.codigo, unidades: s.cajas}))}))};
+  descargar(nombreArchivo() + '.json', JSON.stringify(data, null, 1), 'application/json');
+  $('copiado').textContent = 'Configuración guardada. Se vuelve a abrir con "Abrir configuración guardada".';
+}
+function exportarCsv() {
+  if (avisoDescarga() || !ultimo) return;
+  const {P, C} = ultimo, n1 = x => String(Math.round(x * 10) / 10).replace('.', ',');
+  const filas = [['Cliente', $('pCliente').value], ['Pedido', $('pNro').value], ['Fecha', hoy()], [],
+    ['Pallet', 'Camada (de abajo hacia arriba)', 'Código', 'Artículo', 'Cajas', 'Unidades', 'Kg', 'Tipo de camada', 'Altura pallet (cm)', 'Peso pallet (kg)']];
+  P.forEach((p, i) => {
+    p.capas.forEach((c, k) => c.items.forEach(it => filas.push([i + 1, k + 1, it.p.codigo, it.p.descripcion, it.cajas, it.cajas * it.p.unidades_caja, n1(it.kg),
+      !estable(c, C) ? 'incompleta (arriba)' : c.mixta ? 'mixta' : 'completa', Math.round(p.altTot), Math.round(p.kgTot)])));
+    p.sueltos.forEach(s => filas.push([i + 1, 'caja aparte', s.p.codigo, s.p.descripcion, '', s.cajas, n1(s.kg), 'suelto', Math.round(p.altTot), Math.round(p.kgTot)]));
+  });
+  const csv = filas.map(r => r.map(v => { v = String(v ?? ''); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(';')).join('\r\n');
+  descargar(nombreArchivo() + '.csv', '\ufeff' + csv, 'text/csv;charset=utf-8');
+}
+$('fileAbrir').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      if (d.tipo !== 'armador-pallets-ganale' || !Array.isArray(d.pedido)) throw new Error('formato');
+      lineas = d.pedido.map(l => ({codigo: l.codigo, cajas: l.cajas}));
+      $('pCliente').value = d.cliente || ''; $('pNro').value = d.nro || '';
+      if (d.parametros) PARAMS.forEach(id => { if (d.parametros[id] != null) $(id).value = d.parametros[id]; });
+      opcionSel = d.opcion || 0;
+      const faltan = lineas.filter(l => !byCod[l.codigo]).map(l => l.codigo);
+      $('msgAbrir').textContent = `Abierto: ${f.name}` + (faltan.length ? `. Estos códigos ya no están en el surtido: ${faltan.join(', ')}.` : '');
+      actualizar(true);
+    } catch (err) { $('msgAbrir').textContent = 'Ese archivo no es una configuración guardada del armador de pallets.'; }
+    e.target.value = '';
+  };
+  r.readAsText(f);
+});
+['pCliente', 'pNro'].forEach(id => $(id).addEventListener('input', () => actualizar(false)));
+try { const d = JSON.parse(localStorage.getItem('armador_datos') || 'null'); if (d) { $('pCliente').value = d.cliente || ''; $('pNro').value = d.nro || ''; } } catch (e) {}
+
+function actualizar(rehacerLineas) {
+  if (!lineas.length) lineas = [{codigo: '', cajas: 0}];
+  const C = cfg();
+  colorMap = {}; let k = 0;
+  lineas.forEach(l => { const c = (l.codigo || '').toUpperCase(); if (byCod[c] && !colorMap[c]) colorMap[c] = COLORS[k++ % COLORS.length]; });
+  if (rehacerLineas) renderLineas(); else document.querySelectorAll('.linea').forEach(row => {
+    const i = +row.dataset.i, l = lineas[i], p = byCod[(l.codigo || '').toUpperCase()]; const m = row.querySelector('.meta');
+    if (p && m && l.cajas > 0 && !unitario(p)) { const c = Math.floor(l.cajas / p.cajas_por_camada), r = l.cajas % p.cajas_por_camada;
+      m.textContent = `${f0(l.cajas * p.unidades_caja)} u · ${f1(l.cajas * p.kg_caja)} kg · ${c} camada${c === 1 ? '' : 's'}${r ? ` + ${r} cj` : ''} (std ${p.cajas_por_camada}×${p.camadas})`; }
+  });
+  guardar();
+  render(planificar(lineas, C), C);
+}
+
+$('tblCat').innerHTML = `<thead><tr><th>Código</th><th>Artículo</th><th class="n">U/caja</th><th class="n">Kg/caja</th><th class="n">Cajas/camada</th><th class="n">Camadas</th><th class="n">Cajas/pallet</th><th class="n">Kg/pallet</th><th class="n">Alto pallet</th></tr></thead><tbody>` +
+  CAT.map(p => `<tr><td>${p.codigo}</td><td>${esc(p.descripcion)}</td><td class="n">${p.unidades_caja}</td><td class="n">${f1(p.kg_caja)}</td><td class="n">${p.cajas_por_camada}</td><td class="n">${p.camadas}</td><td class="n">${p.cajas_por_pallet}</td><td class="n">${f0(p.kg_pallet)}</td><td class="n">${unitario(p) ? '—' : p.altura_pallet_std_cm ? p.altura_pallet_std_cm + ' cm' : '<span class="est">sin dato</span>'}</td></tr>`).join('') + `</tbody>`;
+
+actualizar(true);
+</script>
+
+</body>
+</html>
